@@ -19,14 +19,14 @@ def process_tweet(tweet, account):
 
 def send_message(message):
     sleep(1)
-    bot = telegram.Bot(token='810436987:AAESEw086nXGtqt_w9r09-By-5W2bt4fqbM')
+    bot = telegram.Bot(token=config.TELEGRAM_BOT_API_KEY)
     # LR Jack's Tips
-    # bot.send_message(chat_id='-1001190331415', text=message,
-    #                  parse_mode=telegram.ParseMode.MARKDOWN)
-
-    # Spanners Playground
-    bot.send_message(chat_id='-1001456379435', text=message,
+    bot.send_message(chat_id='-1001190331415', text=message,
                      parse_mode=telegram.ParseMode.MARKDOWN)
+
+    # # Spanners Playground
+    # bot.send_message(chat_id='-1001456379435', text=message,
+    #                  parse_mode=telegram.ParseMode.MARKDOWN)
 
 
 api = twitter.Api(consumer_key=config.API_KEY,
