@@ -75,7 +75,7 @@ while True:
 
             if t_tweet['id'] > last_id:
                 print('TEST - ' + str(t_tweet['id']) + ' - ' + t_tweet['created_at'])
-                token = '810436987:AAESEw086nXGtqt_w9r09-By-5W2bt4fqbM'
+                token = config.TELEGRAM_BOT_API_KEY
                 bot = telegram.Bot(token=token)
                 # Spanners Playground
                 bot.send_message(chat_id='-1001456379435', 
