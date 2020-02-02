@@ -3,23 +3,38 @@ from time import sleep
 import telegram
 import html
 from app import config
-# from time import gmtime, strftime
-# from pprint import pprint
+import re
 
 print('Starting')
 
 
 def process_tweet(tweet, account):
     print(account + str(tweet['id']) + ' - ' + tweet['created_at'])
+
     if 'retweet_count' not in tweet and len(tweet['user_mentions']) == 0:
-        twitter_text = account + html.unescape(tweet['full_text'])
-        # print(twitter_text)
+        if 'media' in tweet:
+            regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+            get = re.compile(regex, re.IGNORECASE | re.DOTALL)
+            text = get.sub('', tweet['full_text'])
+            message = tweet['media'][0]['media_url'] + '\n\n' + text
+        else:
+            message = tweet['full_text']
+
+        if 'quoted_status' in tweet:
+            regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+            get = re.compile(regex, re.IGNORECASE | re.DOTALL)
+            message = get.sub('', message)
+            message = message + '\n\n' + '```'
+            + tweet['quoted_status']['full_text'] + '```'
+
+        twitter_text = account + html.unescape(message)
         send_message(twitter_text)
 
 
 def send_message(message):
     sleep(1)
     bot = telegram.Bot(token=config.TELEGRAM_BOT_API_KEY)
+
     # LR Jack's Tips
     bot.send_message(chat_id='-1001190331415', text=message,
                      parse_mode=telegram.ParseMode.MARKDOWN)
@@ -48,7 +63,6 @@ while True:
         g_tweets = [i.AsDict() for i in gt]
         t_tweets = [i.AsDict() for i in tt]
 
-        # pprint(g_tweets[0])
         for p_tweet in reversed(p_tweets):
             with open('p_ids.txt', 'r') as f:
                 last_id = int(f.read())
@@ -73,14 +87,21 @@ while True:
             with open('t_ids.txt', 'r') as f:
                 last_id = int(f.read())
 
+            if 'media' in t_tweet:
+                get = re.compile('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',re.IGNORECASE|re.DOTALL)
+                text = get.sub('', t_tweet['full_text'])
+                tweet = t_tweet['media'][0]['media_url'] + '\n\n' + text
+            else:
+                tweet = t_tweet['full_text']
+
             if t_tweet['id'] > last_id:
                 print('TEST - ' + str(t_tweet['id']) + ' - ' + t_tweet['created_at'])
                 token = config.TELEGRAM_BOT_API_KEY
                 bot = telegram.Bot(token=token)
                 # Spanners Playground
-                bot.send_message(chat_id='-1001456379435', 
-                                text=t_tweets[0]['full_text'],
-                                parse_mode=telegram.ParseMode.MARKDOWN)
+                bot.send_message(chat_id='-1001456379435',
+                                 text=tweet,
+                                 parse_mode=telegram.ParseMode.MARKDOWN)
 
                 with open('t_ids.txt', 'w') as f:
                     f.write(str(t_tweet['id']))
