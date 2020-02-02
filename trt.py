@@ -57,7 +57,7 @@ while True:
     try:
         # pt = api.GetUserTimeline(screen_name="@TopRacingTipsRP", count=200)
         tt = api.GetUserTimeline(screen_name="@spannerjago", count=1)
-        pt = api.GetUserTimeline(screen_name="@TRTPremium", count=10)
+        pt = api.GetUserTimeline(screen_name="@TRTPremium", count=3)
         gt = api.GetUserTimeline(screen_name="@TRTGold", count=3)
 
         p_tweets = [i.AsDict() for i in pt]
