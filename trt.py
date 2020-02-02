@@ -12,8 +12,8 @@ print('Starting')
 
 def process_tweet(tweet, account):
     print(account + str(tweet['id']) + ' - ' + tweet['created_at'])
+    pprint(tweet)
     if 'retweet_count' not in tweet and len(tweet['user_mentions']) == 0:
-        pprint(tweet)
         if 'media' in tweet:
             regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
             get = re.compile(regex, re.IGNORECASE | re.DOTALL)
@@ -28,8 +28,8 @@ def process_tweet(tweet, account):
             message = get.sub('', message)
             message = message + '\n\n' + '```' + tweet['quoted_status']['full_text'] + '```'
 
-            twitter_text = account + html.unescape(message)
-            send_message(twitter_text)
+        twitter_text = account + html.unescape(message)
+        send_message(twitter_text)
 
 
 def send_message(message):
@@ -57,7 +57,7 @@ while True:
     try:
         # pt = api.GetUserTimeline(screen_name="@TopRacingTipsRP", count=200)
         tt = api.GetUserTimeline(screen_name="@spannerjago", count=1)
-        pt = api.GetUserTimeline(screen_name="@TRTPremium", count=3)
+        pt = api.GetUserTimeline(screen_name="@TRTPremium", count=10)
         gt = api.GetUserTimeline(screen_name="@TRTGold", count=3)
 
         p_tweets = [i.AsDict() for i in pt]
