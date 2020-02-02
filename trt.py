@@ -3,8 +3,6 @@ from time import sleep
 import telegram
 import html
 from app import config
-# from time import gmtime, strftime
-from pprint import pprint
 import re
 
 print('Starting')
@@ -12,7 +10,7 @@ print('Starting')
 
 def process_tweet(tweet, account):
     print(account + str(tweet['id']) + ' - ' + tweet['created_at'])
-    pprint(tweet)
+
     if 'retweet_count' not in tweet and len(tweet['user_mentions']) == 0:
         if 'media' in tweet:
             regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
@@ -26,7 +24,8 @@ def process_tweet(tweet, account):
             regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
             get = re.compile(regex, re.IGNORECASE | re.DOTALL)
             message = get.sub('', message)
-            message = message + '\n\n' + '```' + tweet['quoted_status']['full_text'] + '```'
+            message = message + '\n\n' + '```'
+            + tweet['quoted_status']['full_text'] + '```'
 
         twitter_text = account + html.unescape(message)
         send_message(twitter_text)
