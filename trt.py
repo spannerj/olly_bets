@@ -4,6 +4,7 @@ import telegram
 import html
 from app import config
 import re
+from pprint import pprint
 
 print('Starting')
 
@@ -36,8 +37,15 @@ def send_message(message):
     bot = telegram.Bot(token=config.TELEGRAM_BOT_API_KEY)
 
     # LR Jack's Tips
-    bot.send_message(chat_id='-1001190331415', text=message,
-                     parse_mode=telegram.ParseMode.MARKDOWN)
+    try:
+        bot.send_message(chat_id='-1001190331415', text=message,
+                         parse_mode=telegram.ParseMode.MARKDOWN)
+    except Exception as e:
+        print('failed to parse markdown, sent as html')
+        pprint(message)
+        bot.send_message(chat_id='-1001190331415', text=message,
+                         parse_mode=telegram.ParseMode.HTML)
+        print(e)
 
     # # Spanners Playground
     # bot.send_message(chat_id='-1001456379435', text=message,
@@ -56,8 +64,8 @@ while True:
     try:
         # pt = api.GetUserTimeline(screen_name="@TopRacingTipsRP", count=200)
         tt = api.GetUserTimeline(screen_name="@spannerjago", count=1)
-        pt = api.GetUserTimeline(screen_name="@TRTPremium", count=3)
-        gt = api.GetUserTimeline(screen_name="@TRTGold", count=3)
+        pt = api.GetUserTimeline(screen_name="@TRTPremium", count=20)
+        gt = api.GetUserTimeline(screen_name="@TRTGold", count=20)
 
         p_tweets = [i.AsDict() for i in pt]
         g_tweets = [i.AsDict() for i in gt]
