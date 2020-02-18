@@ -25,8 +25,7 @@ def process_tweet(tweet, account):
             regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
             get = re.compile(regex, re.IGNORECASE | re.DOTALL)
             message = get.sub('', message)
-            message = message + '\n\n' + '```'
-            + tweet['quoted_status']['full_text'] + '```'
+            message = message + '\n\n' + '```' + tweet['quoted_status']['full_text'] + '```'
 
         twitter_text = account + html.unescape(message)
         send_message(twitter_text)
