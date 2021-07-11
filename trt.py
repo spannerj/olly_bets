@@ -5,6 +5,7 @@ import html
 from app import config
 import re
 from pprint import pprint
+from datetime import datetime
 
 print('Starting')
 
@@ -28,7 +29,11 @@ def process_tweet(tweet, account):
             message = message + '\n\n' + '```' + tweet['quoted_status']['full_text'] + '```'
 
         twitter_text = account + html.unescape(message)
-        send_message(twitter_text)
+
+        if account == 'OLLY - ':
+            send_olly_message(twitter_text)
+        else:
+            send_message(twitter_text)
 
 
 def send_message(message):
@@ -40,15 +45,27 @@ def send_message(message):
         bot.send_message(chat_id='-1001190331415', text=message,
                          parse_mode=telegram.ParseMode.MARKDOWN)
     except Exception as e:
-        print('failed to parse markdown, sent as html')
-        pprint(message)
+        # print('failed to parse markdown, sent as html')
+        # pprint(message)
         bot.send_message(chat_id='-1001190331415', text=message,
                          parse_mode=telegram.ParseMode.HTML)
         print(e)
 
-    # # Spanners Playground
-    # bot.send_message(chat_id='-1001456379435', text=message,
-    #                  parse_mode=telegram.ParseMode.MARKDOWN)
+def send_olly_message(message):
+    sleep(1)
+    bot = telegram.Bot(token=config.TELEGRAM_BOT_API_KEY)
+
+    # LR Jack's Tips
+    try:
+        # Spanners Playground
+        bot.send_message(chat_id='-1001456379435', text=message,
+                        parse_mode=telegram.ParseMode.MARKDOWN)
+    except Exception as e:
+        # print('failed to parse markdown, sent as html')
+        # pprint(message)
+        bot.send_message(chat_id='-1001190331415', text=message,
+                         parse_mode=telegram.ParseMode.HTML)
+        print(e)
 
 
 api = twitter.Api(consumer_key=config.API_KEY,
@@ -65,10 +82,12 @@ while True:
         tt = api.GetUserTimeline(screen_name="@spannerjago", count=1)
         pt = api.GetUserTimeline(screen_name="@TRTPremium", count=20)
         gt = api.GetUserTimeline(screen_name="@TRTGold", count=20)
+        ro = api.GetUserTimeline(screen_name="@Raceolly", count=20)
 
         p_tweets = [i.AsDict() for i in pt]
         g_tweets = [i.AsDict() for i in gt]
         t_tweets = [i.AsDict() for i in tt]
+        r_tweets = [i.AsDict() for i in ro]
 
         for p_tweet in reversed(p_tweets):
             with open('p_ids.txt', 'r') as f:
@@ -89,6 +108,17 @@ while True:
 
                 with open('g_ids.txt', 'w') as f:
                     f.write(str(g_tweet['id']))
+
+        for r_tweet in reversed(r_tweets):
+            # print(r_tweet)
+            with open('r_ids.txt', 'r') as f:
+                last_id = int(f.read())
+
+            if r_tweet['id'] > last_id:
+                r_results_list = process_tweet(r_tweet, 'OLLY - ')
+
+                with open('r_ids.txt', 'w') as f:
+                    f.write(str(r_tweet['id']))
 
         for t_tweet in reversed(t_tweets):
             with open('t_ids.txt', 'r') as f:
@@ -121,5 +151,5 @@ while True:
     except Exception as e:
         sleep(2)
         print('General Exception', flush=True)
-        print(e)
+        print(str(e))
         continue
