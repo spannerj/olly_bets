@@ -6,6 +6,7 @@ from app import config
 import re
 from pprint import pprint
 from datetime import datetime
+import datetime
 import urllib.request, urllib.error, urllib.parse
 import time
 from selenium import webdriver
@@ -35,13 +36,14 @@ def process_tweet(tweet):
                 bet_list.append(line)
                 # print(line)
 
-        bets = process_bets(bet_list)
+        if len(bet_list) > 0:
+            bets = process_bets(bet_list)
 
-        twitter_text = html.unescape(tweet['full_text'])
+            twitter_text = html.unescape(tweet['full_text'])
 
-        send_olly_message(twitter_text)
+            send_olly_message(twitter_text)
 
-        take_screenshots(bets)
+            take_screenshots(bets)
 
 
 def take_screenshots(bet_list):
@@ -62,10 +64,16 @@ def take_screenshots(bet_list):
             pass
 
         for bet in bet_list:
-            print(bet)
             rtime = get_24_hour_time(bet[1])
             url = 'https://www.oddschecker.com/horse-racing/' + bet[0] + '/' + rtime + '/winner'
             driver.get(url)
+            sleep(2)
+            if driver.current_url == 'https://www.oddschecker.com/horse-racing':
+                # look ahead a day (date needs to be in url)
+                tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d-")
+                url = 'https://www.oddschecker.com/horse-racing/' + tomorrow + bet[0] + '/' + rtime + '/winner'
+                driver.get(url)
+
             total_width = driver.execute_script("return document.body.offsetWidth")
             total_height = driver.execute_script("return document.body.scrollHeight")
             driver.set_window_size(total_width + 250, total_height/2)
@@ -146,7 +154,6 @@ def get_24_hour_time(rtime):
 
 
 def lookup_race_course(rtime, race_info):
-    print(race_info)
     rtime = get_24_hour_time(rtime)
     k = None
     for k,v in race_info.items():
@@ -164,8 +171,6 @@ def send_olly_message(message):
         bot.send_message(chat_id='-1001517051837', text=message,
                         parse_mode=telegram.ParseMode.MARKDOWN)
     except Exception as e:
-        # print('failed to parse markdown, sent as html')
-        # pprint(message)
         bot.send_message(chat_id='-1001517051837', text=message,
                          parse_mode=telegram.ParseMode.HTML)
         print(e)

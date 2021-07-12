@@ -57,11 +57,13 @@ class Oddschecker:
             if index % 2 == 0:
                 country = objs[index + 1].text.strip()
                 if country in ('UK'):
-                    print(obj)
                     try:
                         key = self._clean_name(obj.find('a', attrs = {'class' : 'venue'} ).text.strip())
                         val = [i.text for i in obj.find_all('a', attrs = {'class' : 'race-time'} )]
-                        race_tracks[key] = val
+                        if key in race_tracks:
+                            race_tracks[key] = race_tracks[key] + val
+                        else:
+                            race_tracks[key] = val
                     except Exception as e:
                         print(str(e))
                         continue
