@@ -4,4 +4,4 @@ source venv/bin/activate
 pip install -r requirements.txt
 python -m pip install --upgrade pip
 source env
-python trt.py
+python olly.py

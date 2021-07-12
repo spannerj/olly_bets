@@ -1,2 +1,5 @@
 python-telegram-bot==12.2.0
 python-twitter==3.5
+beautifulsoup4==4.7.1
+requests==2.22.0
+selenium==3.141.0
