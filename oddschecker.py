@@ -43,7 +43,6 @@ class Oddschecker:
         self._get_soup()
         # todays_divs = self._soup.find_all('div', attrs = {'data-day' : 'today'})
         todays_divs = self._soup.find_all('div', attrs = {'class' : 'show-times'})
-        # print(todays_divs)
 
         objs = []
         for div in todays_divs:
@@ -58,11 +57,13 @@ class Oddschecker:
             if index % 2 == 0:
                 country = objs[index + 1].text.strip()
                 if country in ('UK'):
+                    print(obj)
                     try:
                         key = self._clean_name(obj.find('a', attrs = {'class' : 'venue'} ).text.strip())
                         val = [i.text for i in obj.find_all('a', attrs = {'class' : 'race-time'} )]
                         race_tracks[key] = val
-                    except:
+                    except Exception as e:
+                        print(str(e))
                         continue
         return race_tracks
 

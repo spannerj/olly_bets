@@ -22,9 +22,10 @@ print('Starting')
 def process_tweet(tweet):
     bet_list = []
     print(str(tweet['id']) + ' - ' + tweet['created_at'])
+    # pprint(tweet['full_text'])
     # pprint(tweet)
 
-    if 'retweet_count' not in tweet and len(tweet['user_mentions']) == 0:
+    if len(tweet['user_mentions']) == 0:
         message = tweet['full_text'].splitlines()
  
         for line in message:
@@ -32,13 +33,13 @@ def process_tweet(tweet):
             
             if re.match(regex, line.strip()): # line starts with the time
                 bet_list.append(line)
-                print(line)
+                # print(line)
 
         bets = process_bets(bet_list)
 
-        twitter_text = html.unescape(message)
+        twitter_text = html.unescape(tweet['full_text'])
 
-        # send_olly_message(twitter_text)
+        send_olly_message(twitter_text)
 
         take_screenshots(bets)
 
@@ -61,9 +62,9 @@ def take_screenshots(bet_list):
             pass
 
         for bet in bet_list:
+            print(bet)
             rtime = get_24_hour_time(bet[1])
             url = 'https://www.oddschecker.com/horse-racing/' + bet[0] + '/' + rtime + '/winner'
-            # print(url)
             driver.get(url)
             total_width = driver.execute_script("return document.body.offsetWidth")
             total_height = driver.execute_script("return document.body.scrollHeight")
@@ -106,7 +107,7 @@ def process_bets(bet_list):
 
             type = evaluate_type(odds.split('/')[0],odds.split('/')[1])
             course = lookup_race_course(rtime, race_info)
-            print(course)
+            # print(course)
 
             olly_bet = []
             # olly_bet.append(bet_date)
@@ -145,6 +146,7 @@ def get_24_hour_time(rtime):
 
 
 def lookup_race_course(rtime, race_info):
+    print(race_info)
     rtime = get_24_hour_time(rtime)
     k = None
     for k,v in race_info.items():
@@ -159,12 +161,12 @@ def send_olly_message(message):
     # Olly's Tips
     try:
         # Spanners Playground
-        bot.send_message(chat_id='-1001456379435', text=message,
+        bot.send_message(chat_id='-1001517051837', text=message,
                         parse_mode=telegram.ParseMode.MARKDOWN)
     except Exception as e:
         # print('failed to parse markdown, sent as html')
         # pprint(message)
-        bot.send_message(chat_id='-1001456379435', text=message,
+        bot.send_message(chat_id='-1001517051837', text=message,
                          parse_mode=telegram.ParseMode.HTML)
         print(e)
 
@@ -174,8 +176,7 @@ def send_screenshot_message(file):
 
     # Olly's Tips
     try:
-        # Spanners Playground
-        bot.send_photo(chat_id='-1001365813396', photo=open(file, 'rb'))
+        bot.send_photo(chat_id='-1001517051837', photo=open(file, 'rb'))
     except Exception as e:
         print('Error sending screenshot')
         print(e)
@@ -203,8 +204,8 @@ while True:
             if r_tweet['id'] > last_id:
                 r_results_list = process_tweet(r_tweet)
 
-                # with open('r_ids.txt', 'w') as f:
-                #     f.write(str(r_tweet['id']))
+                with open('r_ids.txt', 'w') as f:
+                    f.write(str(r_tweet['id']))
 
         # print('Sleeping at ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
         sleep(10)
