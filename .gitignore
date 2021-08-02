@@ -96,6 +96,7 @@ fabric.properties
 
 data/
 env
+.env
 .vscode/
 *.txt
 *.png

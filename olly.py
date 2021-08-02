@@ -5,8 +5,8 @@ import html
 from app import config
 import re
 from pprint import pprint
-from datetime import datetime
-import datetime
+from datetime import datetime, date, timedelta
+# import datetime
 import urllib.request, urllib.error, urllib.parse
 import time
 from selenium import webdriver
@@ -41,12 +41,12 @@ def process_tweet(tweet):
 
             twitter_text = html.unescape(tweet['full_text'])
 
-            send_olly_message(twitter_text)
+            # send_olly_message(twitter_text)
 
             take_screenshots(bets)
 
 
-def take_screenshots(bet_list):
+def take_screenshots(bets):
     try:
         url = 'https://www.oddschecker.com/horse-racing'
         options = webdriver.ChromeOptions()
@@ -63,21 +63,25 @@ def take_screenshots(bet_list):
         except:
             pass
 
-        for bet in bet_list:
-            rtime = get_24_hour_time(bet[1])
-            url = 'https://www.oddschecker.com/horse-racing/' + bet[0] + '/' + rtime + '/winner'
+        for bet in bets:
+            rdt = bet[6]
+            rtime = rdt.strftime("%H:%M")
+            rdate = rdt.strftime("%Y-%m-%d")
+            url = 'https://www.oddschecker.com/horse-racing/' + rdate + '-' + bet[0] + '/' + rtime + '/winner'
+
             driver.get(url)
             sleep(2)
             if driver.current_url == 'https://www.oddschecker.com/horse-racing':
                 # look ahead a day (date needs to be in url)
                 tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d-")
-                url = 'https://www.oddschecker.com/horse-racing/' + tomorrow + bet[0] + '/' + rtime + '/winner'
+                url = 'https://www.oddschecker.com/horse-racing/' + tomorrow + '-' + bet[0] + '/' + rtime + '/winner'
+                # print('new url = ' + url)
                 driver.get(url)
 
             total_width = driver.execute_script("return document.body.offsetWidth")
             total_height = driver.execute_script("return document.body.scrollHeight")
             driver.set_window_size(total_width + 250, total_height/2)
-            screenshot = bet[0] + '_' + bet[1].replace('.', '_') + '.png'
+            screenshot = 'screenshots/' + bet[0] + '_' + bet[1].replace('.', '_') + '.png'
             driver.save_screenshot(screenshot)
             send_screenshot_message(screenshot)
     except Exception as e:
@@ -92,6 +96,7 @@ def process_bets(bet_list):
     race_info = get_race_info()
     # pprint(race_info)
     olly_data = []
+    # print(bet_list)
     for line in bet_list:
         line = line.split(' - ')
         ep = ''
@@ -114,8 +119,9 @@ def process_bets(bet_list):
             odds = split_bet[-1]
 
             type = evaluate_type(odds.split('/')[0],odds.split('/')[1])
-            course = lookup_race_course(rtime, race_info)
+            course, race_dt = lookup_race_course(rtime, race_info)
             # print(course)
+            # print(race_dt)
 
             olly_bet = []
             # olly_bet.append(bet_date)
@@ -125,6 +131,8 @@ def process_bets(bet_list):
             olly_bet.append(ep)
             olly_bet.append(type)
             olly_bet.append(odds)
+            olly_bet.append(race_dt)
+
             olly_data.append(olly_bet)
     return olly_data
 
@@ -133,7 +141,27 @@ def get_race_info():
     o = Oddschecker('https://www.oddschecker.com/horse-racing')
 
     race_info = o.get_race_tracks_and_timings()
+    race_info = filter_race_info(race_info)
     return(race_info)
+
+
+def filter_race_info(race_info):
+    dat = date.today() + timedelta(days=2)
+    dat = dat.strftime("%Y-%m-%d %H:%M:%S")
+    dat = datetime.strptime(dat, "%Y-%m-%d %H:%M:%S")
+
+    filtered_info = {}
+
+    for k,v in race_info.items():
+        filtered_values = []
+        for race_date_time in v:
+            tm = datetime.strptime(race_date_time, "%Y-%m-%d %H:%M:%S")
+            if (tm > datetime.now()) and (tm < dat):
+                filtered_values.append(tm)
+
+            filtered_info[k] = filtered_values
+
+    return filtered_info
 
 
 def evaluate_type(odds1, odds2):
@@ -150,15 +178,20 @@ def get_24_hour_time(rtime):
     if int(hours[0]) in [1,2,3,4,5,6,7,8,9]:
         new_hours = str(int(hours[0]) + 12)
         rtime = new_hours + ':' + hours[1]
-    return rtime
+        new_tm = datetime.strptime(rtime, "%H:%M")
+
+    return new_tm
 
 
 def lookup_race_course(rtime, race_info):
     rtime = get_24_hour_time(rtime)
     k = None
     for k,v in race_info.items():
-        if rtime in v:
-            return k 
+        for tm in v:
+            # print(tm.time())
+            if rtime.time() == tm.time():
+                return k, tm 
+    return k, rtime
 
 
 def send_olly_message(message):
@@ -167,9 +200,12 @@ def send_olly_message(message):
 
     # Olly's Tips
     try:
-        # Spanners Playground
+        # Ollys Tips
         bot.send_message(chat_id='-1001517051837', text=message,
                         parse_mode=telegram.ParseMode.MARKDOWN)
+        # Spanners Playground
+        # bot.send_message(chat_id='-1001456379435', text=message,
+        #                 parse_mode=telegram.ParseMode.MARKDOWN)
     except Exception as e:
         bot.send_message(chat_id='-1001517051837', text=message,
                          parse_mode=telegram.ParseMode.HTML)
@@ -181,7 +217,10 @@ def send_screenshot_message(file):
 
     # Olly's Tips
     try:
-        bot.send_photo(chat_id='-1001517051837', photo=open(file, 'rb'))
+        # Ollys Tips
+        # bot.send_photo(chat_id='-1001517051837', photo=open(file, 'rb'))
+        # Spanners Playground
+        bot.send_photo(chat_id='-1001456379435', photo=open(file, 'rb'))
     except Exception as e:
         print('Error sending screenshot')
         print(e)
@@ -197,7 +236,7 @@ api = twitter.Api(consumer_key=config.API_KEY,
 # try:
 while True:
     try:
-        ro = api.GetUserTimeline(screen_name="@Raceolly", count=5)
+        ro = api.GetUserTimeline(screen_name="@Raceolly", count=3, trim_user=True, exclude_replies=True, include_rts=False)
 
         r_tweets = [i.AsDict() for i in ro]
 
@@ -214,6 +253,7 @@ while True:
 
         # print('Sleeping at ' + strftime("%Y-%m-%d %H:%M:%S", gmtime()))
         sleep(10)
+
     except KeyboardInterrupt:
         print('Keyboard interrupt')
         break
@@ -221,4 +261,5 @@ while True:
         sleep(2)
         print('General Exception', flush=True)
         print(str(e))
+        print(r_tweet)
         continue

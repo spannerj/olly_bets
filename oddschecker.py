@@ -41,7 +41,6 @@ class Oddschecker:
 
     def get_race_tracks_and_timings(self):
         self._get_soup()
-        # todays_divs = self._soup.find_all('div', attrs = {'data-day' : 'today'})
         todays_divs = self._soup.find_all('div', attrs = {'class' : 'show-times'})
 
         objs = []
@@ -56,14 +55,18 @@ class Oddschecker:
                 continue
             if index % 2 == 0:
                 country = objs[index + 1].text.strip()
-                if country in ('UK'):
+                if country in ('UK', 'IRE'):
                     try:
                         key = self._clean_name(obj.find('a', attrs = {'class' : 'venue'} ).text.strip())
-                        val = [i.text for i in obj.find_all('a', attrs = {'class' : 'race-time'} )]
+                        val = obj.find_all('span', attrs = {'class' : 'time-to-race'})
+                        race_times = []
+                        for race in val:
+                            race_times.append(race['data-time'])
+
                         if key in race_tracks:
-                            race_tracks[key] = race_tracks[key] + val
+                            race_tracks[key] = race_tracks[key] + race_times
                         else:
-                            race_tracks[key] = val
+                            race_tracks[key] = race_times
                     except Exception as e:
                         print(str(e))
                         continue
