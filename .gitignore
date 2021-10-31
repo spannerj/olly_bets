@@ -100,3 +100,5 @@ env
 .vscode/
 *.txt
 *.png
+*.ipynb
+test.py

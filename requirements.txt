@@ -3,3 +3,4 @@ python-twitter==3.5
 beautifulsoup4==4.7.1
 requests==2.22.0
 selenium==3.141.0
+cloudscraper
