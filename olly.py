@@ -23,8 +23,6 @@ print('Starting')
 def process_tweet(tweet):
     bet_list = []
     print(str(tweet['id']) + ' - ' + tweet['created_at'])
-    # pprint(tweet['full_text'])
-    # pprint(tweet)
 
     if len(tweet['user_mentions']) == 0:
         message = tweet['full_text'].splitlines()
@@ -34,69 +32,40 @@ def process_tweet(tweet):
             
             if re.match(regex, line.strip()): # line starts with the time
                 bet_list.append(line)
-                # print(line)
 
         if len(bet_list) > 0:
-            bets = process_bets(bet_list)
+            try:
+                o = Oddschecker()
+                bets = process_bets(o, bet_list)
+                
+                twitter_text = html.unescape(tweet['full_text'])
+                send_olly_message(twitter_text)
+                take_screenshots(o, bets)
+            finally:
+                o.close()
 
-            twitter_text = html.unescape(tweet['full_text'])
 
-            # send_olly_message(twitter_text)
-
-            take_screenshots(bets)
-
-
-def take_screenshots(bets):
+def take_screenshots(o, bets):
     try:
-        url = 'https://www.oddschecker.com/horse-racing'
-        options = webdriver.ChromeOptions()
-        options.add_argument('--width=1024')
-        options.add_argument('--height=768')
-        options.headless = True
-        driver = webdriver.Chrome(options=options)
-        driver.execute_script("document.body.style.zoom='80%'")
-        driver.get(url)
-
-        WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="promo-modal"]/div[1]/div/span'))).click()
-        try:
-            WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.CLASS_NAME, '_3mDe0u'))).click()
-        except:
-            pass
-
         for bet in bets:
             rdt = bet[6]
             rtime = rdt.strftime("%H:%M")
             rdate = rdt.strftime("%Y-%m-%d")
-            url = 'https://www.oddschecker.com/horse-racing/' + rdate + '-' + bet[0] + '/' + rtime + '/winner'
+            o.url = 'https://www.oddschecker.com/horse-racing/' + rdate + '-' + bet[0] + '/' + rtime + '/winner'
 
-            driver.get(url)
-            sleep(2)
-            if driver.current_url == 'https://www.oddschecker.com/horse-racing':
-                # look ahead a day (date needs to be in url)
-                tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d-")
-                url = 'https://www.oddschecker.com/horse-racing/' + tomorrow + '-' + bet[0] + '/' + rtime + '/winner'
-                # print('new url = ' + url)
-                driver.get(url)
-
-            total_width = driver.execute_script("return document.body.offsetWidth")
-            total_height = driver.execute_script("return document.body.scrollHeight")
-            driver.set_window_size(total_width + 250, total_height/2)
-            screenshot = 'screenshots/' + bet[0] + '_' + bet[1].replace('.', '_') + '.png'
-            driver.save_screenshot(screenshot)
-            send_screenshot_message(screenshot)
+            file_name = o.get_screenshot(bet)
+            send_screenshot_message(file_name)
     except Exception as e:
         print(str(e))
         print(bet)
-        print(url)
-
-    driver.quit()
+        print(o.url)
 
 
-def process_bets(bet_list):
-    race_info = get_race_info()
-    # pprint(race_info)
+def process_bets(o, bet_list):
+    race_info = get_race_info(o)
+
     olly_data = []
-    # print(bet_list)
+
     for line in bet_list:
         line = line.split(' - ')
         ep = ''
@@ -120,11 +89,8 @@ def process_bets(bet_list):
 
             type = evaluate_type(odds.split('/')[0],odds.split('/')[1])
             course, race_dt = lookup_race_course(rtime, race_info)
-            # print(course)
-            # print(race_dt)
 
             olly_bet = []
-            # olly_bet.append(bet_date)
             olly_bet.append(course)
             olly_bet.append(rtime)
             olly_bet.append(horse.title())
@@ -137,9 +103,7 @@ def process_bets(bet_list):
     return olly_data
 
 
-def get_race_info():
-    o = Oddschecker('https://www.oddschecker.com/horse-racing')
-
+def get_race_info(o):
     race_info = o.get_race_tracks_and_timings()
     race_info = filter_race_info(race_info)
     return(race_info)
@@ -178,7 +142,8 @@ def get_24_hour_time(rtime):
     if int(hours[0]) in [1,2,3,4,5,6,7,8,9]:
         new_hours = str(int(hours[0]) + 12)
         rtime = new_hours + ':' + hours[1]
-        new_tm = datetime.strptime(rtime, "%H:%M")
+
+    new_tm = datetime.strptime(rtime, "%H:%M")
 
     return new_tm
 
@@ -211,6 +176,7 @@ def send_olly_message(message):
                          parse_mode=telegram.ParseMode.HTML)
         print(e)
 
+
 def send_screenshot_message(file):
     sleep(1)
     bot = telegram.Bot(token=config.TELEGRAM_BOT_API_KEY)
@@ -218,9 +184,9 @@ def send_screenshot_message(file):
     # Olly's Tips
     try:
         # Ollys Tips
-        # bot.send_photo(chat_id='-1001517051837', photo=open(file, 'rb'))
+        bot.send_photo(chat_id='-1001517051837', photo=open(file, 'rb'))
         # Spanners Playground
-        bot.send_photo(chat_id='-1001456379435', photo=open(file, 'rb'))
+        # bot.send_photo(chat_id='-1001456379435', photo=open(file, 'rb'))
     except Exception as e:
         print('Error sending screenshot')
         print(e)
