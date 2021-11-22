@@ -100,4 +100,5 @@ env
 .vscode/
 *.txt
 *.png
+temp.jpg
 chromedriver

@@ -4,9 +4,12 @@ import telegram
 import html
 from app import config
 import re
+import os
 from pprint import pprint
 from datetime import datetime, date, timedelta
-# import datetime
+import cv2 
+import pytesseract
+import urllib.request
 import urllib.request, urllib.error, urllib.parse
 import time
 from selenium import webdriver
@@ -16,6 +19,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait as wait
 from oddschecker import Oddschecker
+from oddschecker_scrape.oddschecker import Oddschecker as oc
 
 print('Starting')
 
@@ -196,6 +200,32 @@ def send_screenshot_message(file):
     except Exception as e:
         print('Error sending screenshot')
         print(e)
+        
+        
+def ocr(url):
+    pth = os.path.dirname(os.path.abspath(__file__))
+    ss_path = pth + '/screenshots'
+    time_set = set()
+    urllib.request.urlretrieve(url, 'temp.jpg')
+    img = cv2.imread('temp.jpg')
+
+    # Adding custom options
+    custom_config = r'--oem 3 --psm 6'
+    txt = pytesseract.image_to_string(img, config=custom_config)
+    split_txt = txt.split('\n')
+    for line in split_txt:
+        t = re.search(r'([012]?[0-9].[0-5][0-9])', line)
+        if t:
+            time_set.add(t[0].replace('.', ':'))       
+    
+    ocs = oc(ss_path)
+    try:
+        for tm in time_set:
+            ocs.get_screenshot_by_time(tm, config.CHANNEL_ID, config.TELEGRAM_BOT_API_KEY)
+    except Exception as e:
+        print(str(e))
+    finally:
+        ocs.close()
 
 
 api = twitter.Api(consumer_key=config.API_KEY,
@@ -219,6 +249,8 @@ while True:
 
             if r_tweet['id'] > last_id:
                 r_results_list = process_tweet(r_tweet)
+                if 'media' in r_tweet:
+                    ocr(r_tweet['media'][0]['media_url'])
 
                 with open('r_ids.txt', 'w') as f:
                     f.write(str(r_tweet['id']))

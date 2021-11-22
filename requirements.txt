@@ -2,3 +2,7 @@ python-telegram-bot==12.2.0
 python-twitter==3.5
 beautifulsoup4==4.7.1
 undetected-chromedriver==3.0.3
+# /Users/user/Code/oddschecker_scraper
+/Users/LRUser/Code/Personal/Random/oddschecker_package
+opencv-python==4.5.4.60
+pytesseract==0.3.8
