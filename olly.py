@@ -33,13 +33,14 @@ def process_tweet(tweet):
             if re.match(regex, line.strip()): # line starts with the time
                 bet_list.append(line)
 
+        twitter_text = html.unescape(tweet['full_text'])
+        send_olly_message(twitter_text)
+
         if len(bet_list) > 0:
             try:
                 o = Oddschecker()
                 bets = process_bets(o, bet_list)
                 
-                twitter_text = html.unescape(tweet['full_text'])
-                send_olly_message(twitter_text)
                 take_screenshots(o, bets)
             finally:
                 o.close()
@@ -60,6 +61,10 @@ def take_screenshots(o, bets):
         print(bet)
         print(o.url)
 
+def remove_URL(text):
+    """Remove URLs from a text string"""
+    return re.sub(r"http\S+", "", text)
+
 
 def process_bets(o, bet_list):
     race_info = get_race_info(o)
@@ -67,6 +72,7 @@ def process_bets(o, bet_list):
     olly_data = []
 
     for line in bet_list:
+        line = remove_URL(line)
         line = line.split(' - ')
         ep = ''
 

@@ -1,5 +1,4 @@
 python-telegram-bot==12.2.0
 python-twitter==3.5
 beautifulsoup4==4.7.1
-selenium==3.141.0
 undetected-chromedriver==3.0.3
