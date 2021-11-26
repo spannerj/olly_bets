@@ -11,17 +11,12 @@ import cv2
 import pytesseract
 import urllib.request
 import urllib.request, urllib.error, urllib.parse
-import time
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait as wait
-from oddschecker import Oddschecker
 from oddschecker_scrape.oddschecker import Oddschecker as oc
 
 print('Starting')
+
+pth = os.path.dirname(os.path.abspath(__file__))
+SS_PATH = pth + '/screenshots'
 
 
 def process_tweet(tweet):
@@ -41,38 +36,35 @@ def process_tweet(tweet):
         send_olly_message(twitter_text)
 
         if len(bet_list) > 0:
+            ocs = oc(SS_PATH)
             try:
-                o = Oddschecker()
-                bets = process_bets(o, bet_list)
-                
-                take_screenshots(o, bets)
+                bets = process_bets(bet_list)
+                for bet in bets:
+                    ocs.get_screenshot_by_time(bet[6], '-1001456379435', config.TELEGRAM_BOT_API_KEY)
+                    # ocs.get_screenshot_by_time(bet[6], config.CHANNEL_ID, config.TELEGRAM_BOT_API_KEY)
+            except Exception as e:
+                print(str(e))
             finally:
-                o.close()
+                ocs.close()
+        
+        
 
-
-def take_screenshots(o, bets):
-    try:
-        for bet in bets:
-            rdt = bet[6]
-            rtime = rdt.strftime("%H:%M")
-            rdate = rdt.strftime("%Y-%m-%d")
-            o.url = 'https://www.oddschecker.com/horse-racing/' + rdate + '-' + bet[0] + '/' + rtime + '/winner'
-
-            file_name = o.get_screenshot(bet)
-            send_screenshot_message(file_name)
-    except Exception as e:
-        print(str(e))
-        print(bet)
-        print(o.url)
 
 def remove_URL(text):
     """Remove URLs from a text string"""
     return re.sub(r"http\S+", "", text)
 
 
-def process_bets(o, bet_list):
-    race_info = get_race_info(o)
+def process_bets(bet_list):
+    ocs = oc(SS_PATH)
+    try:
+        race_info = ocs.get_race_tracks_and_timings()
+    except Exception as e:
+        print(str(e))
+    finally:
+        ocs.close()
 
+    race_info = filter_race_info(race_info)
     olly_data = []
 
     for line in bet_list:
@@ -111,12 +103,6 @@ def process_bets(o, bet_list):
 
             olly_data.append(olly_bet)
     return olly_data
-
-
-def get_race_info(o):
-    race_info = o.get_race_tracks_and_timings()
-    race_info = filter_race_info(race_info)
-    return(race_info)
 
 
 def filter_race_info(race_info):
@@ -163,7 +149,6 @@ def lookup_race_course(rtime, race_info):
     k = None
     for k,v in race_info.items():
         for tm in v:
-            # print(tm.time())
             if rtime.time() == tm.time():
                 return k, tm 
     return k, rtime
@@ -176,35 +161,18 @@ def send_olly_message(message):
     # Olly's Tips
     try:
         # Ollys Tips
-        bot.send_message(chat_id='-1001517051837', text=message,
-                        parse_mode=telegram.ParseMode.MARKDOWN)
-        # Spanners Playground
-        # bot.send_message(chat_id='-1001456379435', text=message,
+        # bot.send_message(chat_id='-1001517051837', text=message,
         #                 parse_mode=telegram.ParseMode.MARKDOWN)
+        # Spanners Playground
+        bot.send_message(chat_id='-1001456379435', text=message,
+                        parse_mode=telegram.ParseMode.MARKDOWN)
     except Exception as e:
         bot.send_message(chat_id='-1001517051837', text=message,
                          parse_mode=telegram.ParseMode.HTML)
         print(e)
-
-
-def send_screenshot_message(file):
-    sleep(1)
-    bot = telegram.Bot(token=config.TELEGRAM_BOT_API_KEY)
-
-    # Olly's Tips
-    try:
-        # Ollys Tips
-        bot.send_photo(chat_id='-1001517051837', photo=open(file, 'rb'))
-        # Spanners Playground
-        # bot.send_photo(chat_id='-1001456379435', photo=open(file, 'rb'))
-    except Exception as e:
-        print('Error sending screenshot')
-        print(e)
         
         
 def ocr(url):
-    pth = os.path.dirname(os.path.abspath(__file__))
-    ss_path = pth + '/screenshots'
     time_set = set()
     urllib.request.urlretrieve(url, 'temp.jpg')
     img = cv2.imread('temp.jpg')
@@ -212,13 +180,14 @@ def ocr(url):
     # Adding custom options
     custom_config = r'--oem 3 --psm 6'
     txt = pytesseract.image_to_string(img, config=custom_config)
+    pprint(txt)
     split_txt = txt.split('\n')
     for line in split_txt:
         t = re.search(r'([012]?[0-9].[0-5][0-9])', line)
         if t:
             time_set.add(t[0].replace('.', ':'))       
     
-    ocs = oc(ss_path)
+    ocs = oc(SS_PATH)
     try:
         for tm in time_set:
             ocs.get_screenshot_by_time(tm, config.CHANNEL_ID, config.TELEGRAM_BOT_API_KEY)
