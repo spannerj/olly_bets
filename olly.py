@@ -154,20 +154,15 @@ def lookup_race_course(rtime, race_info):
     return k, rtime
 
 
-def send_olly_message(message):
+def send_olly_message(message, chat='-1001517051837'):
     sleep(1)
     bot = telegram.Bot(token=config.TELEGRAM_BOT_API_KEY)
 
-    # Olly's Tips
     try:
-        # Ollys Tips
-        bot.send_message(chat_id='-1001517051837', text=message,
+        bot.send_message(chat_id=chat, text=message,
                         parse_mode=telegram.ParseMode.MARKDOWN)
-        # Spanners Playground
-        # bot.send_message(chat_id='-1001456379435', text=message,
-        #                 parse_mode=telegram.ParseMode.MARKDOWN)
     except Exception as e:
-        bot.send_message(chat_id='-1001456379435', text=message,
+        bot.send_message(chat_id='-1001456379435', text=message,  # spanners playground
                          parse_mode=telegram.ParseMode.HTML)
         print(e)
         
@@ -177,39 +172,77 @@ def valid_odds(input_string):
     match = regex.match(str(input_string))
     return bool(match)
 
+
+def time_found(input_string):
+    regex = re.compile('^([0-1]?[0-9]|2[0-3])[:][0-5][0-9]')
+    match = regex.match(str(input_string))
+    return bool(match)
+
+
+def get_b365_text(txt):
+    split_txt = txt.split('\n')
+    bet_found = False
+    bet = {}
+    bet_list = []
+    for line in split_txt:
+        if ('(' in line) and (')'in line):
+            # print(line)
+            
+            strt = line.find(next(filter(str.isalnum, line)))
+            end = line.find('(', strt)
+            if bet_found:
+                bet_found = False
+                line = line[strt:end].strip()
+                split_line = line.split(' ')
+                bet['r_time'] = split_line[0]
+                bet['course'] = split_line[1]
+                bet_list.append(bet)
+                bet = {}
+            else:
+                bet_found = True
+                bet['horse'] = line[strt:end].strip()
+                odds = line.split().pop(-1)
+                if valid_odds(odds):
+                    bet['odds'] = odds
+                else:
+                    bet['odds'] = ''
+    return bet_list    
+    
+    
+def get_sky_text(txt):
+    split_txt = txt.split('\n')
+
+    bet = {}
+    bet_list = []
+    for line in split_txt:
+        if ('-' in line) and (' @ 'in line):   
+            split_line = line.split('-')
+            bet['horse'] = split_line[1].strip().split(' @ ')[0].strip()
+            bet['odds'] = split_line[1].strip().split(' @ ')[1].strip()
+            
+        if time_found(line):
+            split_line = line.split(' ')
+            bet['r_time'] = split_line[1].strip()
+            bet['course'] = split_line[2].strip()            
+            bet_list.append(bet)
+            bet = {}
+
+    return bet_list
+
         
 def get_jupyter_text(text):
     try:
-        split_txt = text.split('\n')
-        bet_found = False
-        bet = {}
-        bet_list = []
-        for line in split_txt:
-            if ('(' in line) and (')'in line):
-                strt = line.find(next(filter(str.isalnum, line)))
-                end = line.find('(', strt)
-                if bet_found:
-                    bet_found = False
-                    line = line[strt:end].strip()
-                    split_line = line.split(' ')
-                    bet['r_time'] = split_line[0]
-                    bet['course'] = split_line[1]
-                    bet_list.append(bet)
-                    bet = {}
-                else:
-                    bet_found = True
-                    bet['horse'] = line[strt:end].strip()
-                    odds = line.split().pop(-1)
-                    if valid_odds(odds):
-                        bet['odds'] = odds
-                    else:
-                        bet['odds'] = ''
+        bet_list = get_b365_text(text)
+    
+        if len(bet_list) == 0:
+            bet_list = get_sky_text(text)
         
         bet_txt = ''             
         for bet in bet_list:
             bet_txt = bet_txt + bet['r_time'] + ' - ' + bet['horse'] + ' ' + bet['odds'] + '\n'
             
-        send_olly_message(bet_txt)
+        if len(bet_txt) > 0:
+            send_olly_message(bet_txt, '-1001456379435')
     except Exception as e:
         print(str(e))
         print('Unable to extract text for Jupyter')
@@ -224,6 +257,7 @@ def ocr(url):
     custom_config = r'--oem 3 --psm 6'
     txt = pytesseract.image_to_string(img, config=custom_config)
     get_jupyter_text(txt)
+    
     split_txt = txt.split('\n')
     for line in split_txt:
         t = re.search(r'([012]?[0-9].[0-5][0-9])', line)
