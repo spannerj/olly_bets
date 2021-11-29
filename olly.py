@@ -161,15 +161,58 @@ def send_olly_message(message):
     # Olly's Tips
     try:
         # Ollys Tips
-        # bot.send_message(chat_id='-1001517051837', text=message,
-        #                 parse_mode=telegram.ParseMode.MARKDOWN)
-        # Spanners Playground
-        bot.send_message(chat_id='-1001456379435', text=message,
-                        parse_mode=telegram.ParseMode.MARKDOWN)
-    except Exception as e:
         bot.send_message(chat_id='-1001517051837', text=message,
+                        parse_mode=telegram.ParseMode.MARKDOWN)
+        # Spanners Playground
+        # bot.send_message(chat_id='-1001456379435', text=message,
+        #                 parse_mode=telegram.ParseMode.MARKDOWN)
+    except Exception as e:
+        bot.send_message(chat_id='-1001456379435', text=message,
                          parse_mode=telegram.ParseMode.HTML)
         print(e)
+        
+        
+def valid_odds(input_string):
+    regex = re.compile('(\d+\/\d+)')
+    match = regex.match(str(input_string))
+    return bool(match)
+
+        
+def get_jupyter_text(text):
+    try:
+        split_txt = text.split('\n')
+        bet_found = False
+        bet = {}
+        bet_list = []
+        for line in split_txt:
+            if ('(' in line) and (')'in line):
+                strt = line.find(next(filter(str.isalnum, line)))
+                end = line.find('(', strt)
+                if bet_found:
+                    bet_found = False
+                    line = line[strt:end].strip()
+                    split_line = line.split(' ')
+                    bet['r_time'] = split_line[0]
+                    bet['course'] = split_line[1]
+                    bet_list.append(bet)
+                    bet = {}
+                else:
+                    bet_found = True
+                    bet['horse'] = line[strt:end].strip()
+                    odds = line.split().pop(-1)
+                    if valid_odds(odds):
+                        bet['odds'] = odds
+                    else:
+                        bet['odds'] = ''
+        
+        bet_txt = ''             
+        for bet in bet_list:
+            bet_txt = bet_txt + bet['r_time'] + ' - ' + bet['horse'] + ' ' + bet['odds'] + '\n'
+            
+        send_olly_message(bet_txt)
+    except Exception as e:
+        print(str(e))
+        print('Unable to extract text for Jupyter')
         
         
 def ocr(url):
@@ -180,7 +223,7 @@ def ocr(url):
     # Adding custom options
     custom_config = r'--oem 3 --psm 6'
     txt = pytesseract.image_to_string(img, config=custom_config)
-    pprint(txt)
+    get_jupyter_text(txt)
     split_txt = txt.split('\n')
     for line in split_txt:
         t = re.search(r'([012]?[0-9].[0-5][0-9])', line)
@@ -208,8 +251,7 @@ api = twitter.Api(consumer_key=config.API_KEY,
 while True:
     try:
         ro = api.GetUserTimeline(screen_name="@Raceolly", count=3, trim_user=True, exclude_replies=True, include_rts=False)
-
-        r_tweets = [i.AsDict() for i in ro]
+        r_tweets = [i.AsDict() for i in ro]        
 
         for r_tweet in reversed(r_tweets):
             # print(r_tweet)
